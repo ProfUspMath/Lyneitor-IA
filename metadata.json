@@ -1,0 +1,6 @@
+{
+  "name": "Lyneitor",
+  "description": "Un agente experto en lenguajes de programación, bases de datos (SQL, SQL Server), y diseño web/móvil con integraciones para publicar en GitHub y Vercel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
