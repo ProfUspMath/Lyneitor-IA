@@ -87,11 +87,27 @@ export default function App() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Error al conectar con el servidor.");
+        let errorMessage = "Error al conectar con el servidor.";
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (_) {
+          try {
+            const errorText = await res.text();
+            errorMessage = errorText.substring(0, 300) || `Código de estado: ${res.status}`;
+          } catch (__) {
+            errorMessage = `Código de estado HTTP: ${res.status}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        throw new Error("La respuesta del servidor no tiene un formato JSON válido.");
+      }
       
       const newAIMessage: Message = {
         id: `msg-${Date.now()}-ai`,

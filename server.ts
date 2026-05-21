@@ -101,7 +101,7 @@ Tus modales son profesionales, rápidos, directos y altamente funcionales.
       console.error("Error communicating with Gemini API:", error);
       res.status(500).json({
         error: "Ocurrió un error al consultar con el agente experto.",
-        details: error.message || error,
+        details: error instanceof Error ? error.message : (typeof error === "object" ? JSON.stringify(error) : String(error)),
       });
     }
   });
