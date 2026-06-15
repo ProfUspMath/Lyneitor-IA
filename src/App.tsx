@@ -43,6 +43,14 @@ export default function App() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyMessage = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   // Auto scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,8 +77,9 @@ export default function App() {
 
     try {
       // Build conversation history format for the express secure proxy
+      // Clean and robust: exclude welcome message and any messages that are communication errors
       const historyPayload = messages
-        .filter((m) => m.id !== "welcome")
+        .filter((m) => m.id !== "welcome" && !m.id.endsWith("-err"))
         .map((m) => ({
           role: m.role,
           text: m.text
@@ -90,7 +99,9 @@ export default function App() {
         let errorMessage = "Error al conectar con el servidor.";
         try {
           const errorData = await res.json();
-          errorMessage = errorData.error || errorData.details || errorMessage;
+          errorMessage = errorData.error && errorData.details
+            ? `⚠️ **${errorData.error}**\n\n${errorData.details}`
+            : (errorData.error || errorData.details || errorMessage);
         } catch (_) {
           try {
             const errorText = await res.text();
@@ -122,7 +133,9 @@ export default function App() {
       const errorMessage: Message = {
         id: `msg-${Date.now()}-err`,
         role: "model",
-        text: `⚠️ **Error de Comunicación:** ${err.message || "No pudimos comunicarnos con el agente experto en el servidor."}\n\nPor favor, verifica que las variables de entorno de tu API Key estén correctamente configuradas.`,
+        text: err.message.includes("⚠️") 
+          ? err.message 
+          : `⚠️ **Error de Comunicación:** ${err.message || "No pudimos de conectar con el agente experto en el servidor."}\n\nPor favor, verifica que la variable de entorno de tu API Key esté correctamente configurada.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -172,7 +185,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none antialiased">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased">
       {/* Upper Navigation Header */}
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -398,9 +411,28 @@ export default function App() {
                         }`}>
                           <MarkdownParser content={msg.text} />
                         </div>
-                        <span className="text-[10px] text-slate-600 font-mono mt-1 px-1">
-                          {msg.timestamp}
-                        </span>
+                        <div className="flex items-center space-x-3 mt-1 px-1">
+                          <span className="text-[10px] text-slate-600 font-mono">
+                            {msg.timestamp}
+                          </span>
+                          <button
+                            onClick={() => handleCopyMessage(msg.id, msg.text)}
+                            className="text-[10px] text-slate-500 hover:text-cyan-400 font-mono flex items-center gap-1 transition cursor-pointer bg-transparent border-none outline-none focus:text-cyan-400"
+                            title={copiedId === msg.id ? "Texto copiado" : "Copiar texto"}
+                          >
+                            {copiedId === msg.id ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="text-emerald-400 font-semibold">¡Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copiar</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
